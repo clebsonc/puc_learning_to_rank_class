@@ -1,6 +1,7 @@
 import numpy as np
 import operator
 
+
 class Node(object):
     def __init__(self, node_name, inlinks, outlinks):
         """Build the structure of a node in the web.
@@ -19,8 +20,8 @@ class Graph(object):
     def __init__(self):
         self.structure = dict()
         self.graph_size = 0
-    
-    def add_node(self, node: Node=None):
+
+    def add_node(self, node: Node = None):
         """Add a node to the graph.
         Keyword Arguments:
             node {Node} --The graph Node. (default: {None})
@@ -33,10 +34,10 @@ class Graph(object):
 
     def get_node(self, name: str) -> Node:
         """Return the node with the given name.
-        
+
         Arguments:
             name {str} -- The name of the node to be retrieved from the graph
-        
+
         Returns:
             Node -- The Node if it exists in the graph.
         """
@@ -49,30 +50,30 @@ class Graph(object):
         for key in self.structure.keys():
             print(key, 'inlink: ', self.structure.get(key).inlinks, 'outlink', self.structure.get(key).outlinks)
 
+
 class PageRank(object):
     def __init__(self, graph: Graph, number_of_iterations: int = 10):
         """Computes the PageRank for the given graph.
-        
+
         Arguments:
             graph {Graph} -- The graph to compute the pagerank
-        
+
         Keyword Arguments:
             number_of_iterations {int} -- Number of iterations required to compute the pagerank (default: {10})
         """
         self.graph = graph
         self.number_of_iterations = number_of_iterations
 
-    def compute(self) -> dict:
-        """Compute the page rank for the graph.
-        
+    def compute(self, alpha=0.85) -> dict:
+        """ Compute the page rank for the graph.
         Returns:
             dict -- dictionary of scores for each node in the graph
         """
         scores = dict()
         # get the initial score for each page in the graph
         for key in self.graph.structure:
-            scores[key] = 1/len(self.graph.structure)
-        alpha=0.85
+            scores[key] = 1 / len(self.graph.structure)
+
         number_of_pages = self.graph.graph_size
         for i in range(self.number_of_iterations):
             print('iteration', i, scores)
@@ -83,9 +84,10 @@ class PageRank(object):
                 pg_in = np.asarray([scores[x] for x in node.inlinks])
                 # get the number of outlinks for all incoming links of the current node.
                 out = np.asarray([len(self.graph.structure.get(x).outlinks) for x in node.inlinks])
-                new_score[key] = alpha * np.sum(pg_in/out + (1-alpha)/number_of_pages)
+                new_score[key] = alpha * np.sum(pg_in / out) + (1 - alpha) / number_of_pages
             scores = new_score
         return scores
+
 
 if __name__ == "__main__":
     graph1 = Graph()

@@ -1,7 +1,7 @@
 import numpy as np
 from os import listdir
-from IPython import embed
 import string
+from IPython import embed
 
 
 class DataReader(object):
@@ -33,10 +33,17 @@ class DataReader(object):
 class Term(object):
     def __init__(self, name):
         self.name = name
-        self.documents = set()
-        self.frequency = len(0)
-        pass
-        # oveload operator in constructor
+        self.frequency = 0
+
+    def __str__(self):
+        return self.name
+
+    def __hash__(self):
+        ## print(hash(str(self)))
+        return hash(str(self))
+
+    def __eq__(self, other):
+        return self.name == other.name
 
 
 class BooleanModel(object):
@@ -44,77 +51,94 @@ class BooleanModel(object):
         self.doc = documents
         self.inverted_index = dict()
 
+    def __update_frequency(self):
+        for key in self.inverted_index:
+            key.frequency = len(self.inverted_index[key])
+
     def compute_inverted_index(self):
         for key, text in self.doc.items():
             text = text.split(" ")
             text = set(text)
             for term in text:
+                term_object = Term(term)
                 try:
                     dummy = int(term)
                 except ValueError:
-                    if term in self.inverted_index:
-                        self.inverted_index[term].add(key)
+                    if term_object in self.inverted_index:
+                        self.inverted_index[term_object].add(key)
                     else:
-                        self.inverted_index[term] = {key, }
+                        self.inverted_index[term_object] = {key, }
+        self.__update_frequency()
 
     def subtract(self, term1, term2):
         valid_docs = set()
-        res1 = self.inverted_index[term1]
-        res2 = self.inverted_index[term2]
+        res1 = self.inverted_index[Term(term1)]
+        res2 = self.inverted_index[Term(term2)]
         valid_docs = res1.difference(res2)
         return valid_docs
 
     def add(self, term1, term2):
         valid_docs = set()
-        res1 = self.inverted_index[term1]
-        res2 = self.inverted_index[term2]
+        res1 = self.inverted_index[Term(term1)]
+        res2 = self.inverted_index[Term(term2)]
         valid_docs = res1.union(res2)
         return valid_docs
 
     def intersect(self, term1, term2):
         valid_docs = set()
-        res1 = self.inverted_index[term1]
-        res2 = self.inverted_index[term2]
+        res1 = self.inverted_index[Term(term1)]
+        res2 = self.inverted_index[Term(term2)]
         valid_docs = res1.intersection(res2)
         return valid_docs
 
-    def query(self, processed_terms):
-        """String in the format: AMDEUS and Jose or Pneu and Balburdio
+    def retrieve_docs(self, processed_terms):
+        """String in the format:
+            * (caesar and brutus)
+            * (caesar or brutus)
+            * (caesar not brutus)
         Arguments:
             processed_terms {[type]} -- [description]
         """
-        processed_terms = [x.strip() for x in processed_terms.split(" ")]
-        # [AMDEUS, and, Jose, or, Pneu, and, Balburdio]
-        it1 = 0
-        iop = it1 + 1
-        it2 = it1 + 2
+        term1 = processed_terms[0]
+        operator = processed_terms[1]
+        term2 = processed_terms[2]
         valid_docs = set()
-        while it2 < len(processed_terms):
-            term1 = processed_terms[it1]
-            operator = processed_terms[iop]
-            term2 = processed_terms[it2]
-            it1 += 4
-            iop += it1 + 1
-            it2 += it1 + 2
-            if operator == 'and':
-                if len(valid_docs):
-                    valid_docs.intersection(self.intersect(term1, term2))
-                else:
-                    valid_docs = self.intersect(term1, term2)
-            if operator == 'or':
-                valid_docs.union(self.add(term1, term2))
-            if operator == 'not':
-                valid_docs.difference(self.subtract(term1, term2))
+        if operator == 'and':
+            valid_docs = self.intersect(term1, term2)
+        elif operator == 'or':
+            valid_docs = self.add(term1, term2)
+        else:
+            valid_docs = self.subtract(term1, term2)
         return valid_docs
 
 
 def main():
-    data_reader = DataReader("./data/shakespeare/")
-    documentos = data_reader.read()
-    bm = BooleanModel(documents=documentos)
+    # data_reader = DataReader("./data/shakespeare/")
+    documents = {  # documentos que utilizei para testar o algoritmo
+        "doc1": "i did enact julius caesar i was killed i the capitol brutus killed me",
+        "doc2": "so let it be with caesar the noble brutus hath told you caesar was ambitious",
+        "doc3": ("full fathom five thy father lies of his bones are coral made those are pearls"
+                 " that were his eyes nothing of him that doth fade but doth suffer a sea-change"
+                 "into something rich and strange")
+    }
+
+    # documents = data_reader.read()
+    bm = BooleanModel(documents=documents)
     bm.compute_inverted_index()
-    res = bm.query("caesar and brutus")
-    print(res)
+    res1 = bm.retrieve_docs(
+        ("caesar", "or", "brutus"),
+    )
+    print(res1)
+
+    res2 = bm.retrieve_docs(
+        ("caesar", "and", "julius"),
+    )
+    print(res2)
+
+    res3 = bm.retrieve_docs(
+        ("bones", "not", "caesar"),
+    )
+    print(res3)
 
 
 if __name__ == "__main__":
